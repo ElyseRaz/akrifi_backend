@@ -1,0 +1,41 @@
+# Binaires compilés localement
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+server
+
+# Secrets — à injecter via variables d'environnement Railway
+.env
+.env.local
+.env.*.local
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Docker lui-même (évite récursion)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Fichiers de développement / éditeur
+.vscode/
+.idea/
+*.swp
+*.swo
+*.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Uploads locaux (stockage Supabase en production)
+uploads/
+
+# Tests
+*_test.go
+testdata/

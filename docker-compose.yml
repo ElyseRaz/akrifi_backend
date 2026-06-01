@@ -1,0 +1,52 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: akrifi_db
+    environment:
+      POSTGRES_DB: akrifi_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d akrifi_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: akrifi_api
+    ports:
+      - "3000:3000"
+    environment:
+      # Base de données locale (via le service "db" ci-dessus)
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: akrifi_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      # JWT
+      JWT_SECRET: dev_secret_changez_en_production
+      JWT_EXPIRES_IN: 7d
+      # Serveur
+      PORT: "3000"
+      NODE_ENV: development
+      # Uploads
+      MAX_FILE_SIZE: "5242880"
+      # Supabase Storage — laisser vide pour stockage local en dev
+      SUPABASE_URL: ""
+      SUPABASE_SERVICE_ROLE_KEY: ""
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+    name: akrifi_pgdata
