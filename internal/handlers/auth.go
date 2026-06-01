@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"log"
 	"math/big"
 	"net/http"
 	"os"
@@ -275,13 +276,11 @@ func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 		dest, code := input.Email, codeStr
 		go func() {
 			if emailErr := mail.SendResetCode(dest, code); emailErr != nil {
-				fmt.Printf("[WARN] Échec envoi email reset à %s : %v\n", dest, emailErr)
-			} else {
-				fmt.Printf("[INFO] Email reset envoyé à %s\n", dest)
+				log.Printf("[MAIL] ERREUR envoi à %s : %v", dest, emailErr)
 			}
 		}()
 	} else {
-		fmt.Printf("[INFO] SMTP non configuré — code reset pour %s non envoyé par email\n", input.Email)
+		log.Printf("[MAIL] SMTP non configuré — code non envoyé par email à %s", input.Email)
 	}
 
 	resp := map[string]any{"message": "Si cet email existe, un code a été envoyé."}
