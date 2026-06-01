@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
 
+	"akrifi/api/internal/mail"
 	"akrifi/api/internal/middleware"
 )
 
@@ -268,7 +269,16 @@ func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Envoi email — non bloquant : une erreur SMTP ne doit pas faire échouer la requête
+	if mail.IsConfigured() {
+		if emailErr := mail.SendResetCode(input.Email, codeStr); emailErr != nil {
+			// Log l'erreur sans l'exposer au client
+			fmt.Printf("[WARN] Échec envoi email reset à %s : %v\n", input.Email, emailErr)
+		}
+	}
+
 	resp := map[string]any{"message": "Si cet email existe, un code a été envoyé."}
+	// debug_code uniquement en développement — jamais en production
 	if os.Getenv("APP_ENV") == "development" {
 		resp["debug_code"] = codeStr
 	}
