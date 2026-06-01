@@ -269,12 +269,19 @@ func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Envoi email — non bloquant : une erreur SMTP ne doit pas faire échouer la requête
+	// Envoi en arrière-plan — la réponse HTTP est renvoyée immédiatement,
+	// sans attendre le serveur SMTP (évite le timeout 499 côté client).
 	if mail.IsConfigured() {
-		if emailErr := mail.SendResetCode(input.Email, codeStr); emailErr != nil {
-			// Log l'erreur sans l'exposer au client
-			fmt.Printf("[WARN] Échec envoi email reset à %s : %v\n", input.Email, emailErr)
-		}
+		dest, code := input.Email, codeStr
+		go func() {
+			if emailErr := mail.SendResetCode(dest, code); emailErr != nil {
+				fmt.Printf("[WARN] Échec envoi email reset à %s : %v\n", dest, emailErr)
+			} else {
+				fmt.Printf("[INFO] Email reset envoyé à %s\n", dest)
+			}
+		}()
+	} else {
+		fmt.Printf("[INFO] SMTP non configuré — code reset pour %s non envoyé par email\n", input.Email)
 	}
 
 	resp := map[string]any{"message": "Si cet email existe, un code a été envoyé."}

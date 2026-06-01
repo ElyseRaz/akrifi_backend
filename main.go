@@ -14,6 +14,7 @@ import (
 
 	"akrifi/api/internal/config"
 	"akrifi/api/internal/handlers"
+	"akrifi/api/internal/mail"
 	"akrifi/api/internal/middleware"
 )
 
@@ -152,6 +153,12 @@ func main() {
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		handlers.JSONError(w, 404, "Endpoint introuvable")
 	})
+
+	if mail.IsConfigured() {
+		log.Println("✓ SMTP configuré — les emails de réinitialisation seront envoyés")
+	} else {
+		log.Println("⚠️  SMTP non configuré (SMTP_HOST / SMTP_USER / SMTP_PASS manquants) — les emails NE seront PAS envoyés")
+	}
 
 	fmt.Printf("\n🎶 AKRIFI API (Go) démarrée sur http://localhost:%s\n", port)
 	fmt.Printf("   Environnement : %s\n\n", getEnv("NODE_ENV", "development"))
