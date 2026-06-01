@@ -20,6 +20,11 @@ import (
 func main() {
 	godotenv.Load()
 
+	// Refus de démarrer sans JWT_SECRET — un secret vide permettrait de forger n'importe quel token
+	if os.Getenv("JWT_SECRET") == "" {
+		log.Fatal("FATAL: la variable d'environnement JWT_SECRET est vide ou absente. Démarrage annulé.")
+	}
+
 	port := getEnv("PORT", "3000")
 
 	ctx := context.Background()
@@ -51,6 +56,7 @@ func main() {
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders: []string{"Accept", "Authorization", "Content-Type"},
 	}))
+	r.Use(securityHeaders)
 	r.Use(requestLogger)
 
 	r.Handle("/uploads/*", http.StripPrefix("/uploads", http.FileServer(http.Dir("uploads"))))
@@ -70,6 +76,7 @@ func main() {
 		r.Post("/register", authH.Register)
 		r.Post("/login", authH.Login)
 		r.Post("/forgot-password", authH.ForgotPassword)
+		r.Post("/reset-password", authH.ResetPassword)
 		r.Group(func(r chi.Router) {
 			r.Use(authMW.Authenticate)
 			r.Get("/me", authH.Me)
@@ -185,4 +192,17 @@ func getEnv(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+// securityHeaders ajoute les en-têtes HTTP de sécurité recommandés.
+func securityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
+		w.Header().Set("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
+		// Limite la taille du body à 2 Mo pour prévenir les attaques DoS
+		r.Body = http.MaxBytesReader(w, r.Body, 2<<20)
+		next.ServeHTTP(w, r)
+	})
 }

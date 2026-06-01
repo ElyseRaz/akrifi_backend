@@ -206,6 +206,15 @@ func (h *UsersHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(input.NewPassword) < 8 {
+		JSONError(w, 400, "Le nouveau mot de passe doit contenir au moins 8 caractères")
+		return
+	}
+	if len(input.NewPassword) > 128 {
+		JSONError(w, 400, "Le mot de passe est trop long")
+		return
+	}
+
 	var hash string
 	err := h.pool.QueryRow(r.Context(),
 		`SELECT password_hash FROM users WHERE id=$1`, u.ID,
@@ -266,6 +275,11 @@ func (h *UsersHandler) UpdateRole(w http.ResponseWriter, r *http.Request) {
 // DELETE /api/users/:id (super)
 func (h *UsersHandler) Deactivate(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	caller := middleware.UserFromCtx(r.Context())
+	if caller.ID == id {
+		JSONError(w, 400, "Impossible de désactiver son propre compte")
+		return
+	}
 	h.pool.Exec(r.Context(), `UPDATE users SET is_active=false WHERE id=$1`, id)
 	JSON(w, 200, map[string]string{"message": "Utilisateur désactivé"})
 }

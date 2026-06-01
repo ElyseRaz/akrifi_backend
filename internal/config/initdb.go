@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"log"
+	"os"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
@@ -159,6 +160,8 @@ func InitDB(ctx context.Context, pool *pgxpool.Pool) error {
 
 	pool.Exec(ctx, `ALTER TABLE songs ADD COLUMN IF NOT EXISTS paroles TEXT`)
 	pool.Exec(ctx, `ALTER TABLE songs ALTER COLUMN numero DROP NOT NULL`)
+	pool.Exec(ctx, `ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_code_hash VARCHAR(255)`)
+	pool.Exec(ctx, `ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_code_expires_at TIMESTAMP`)
 	log.Println("✓ Migrations appliquées")
 
 	if _, err := pool.Exec(ctx, seedVaomiera); err != nil {
@@ -166,7 +169,12 @@ func InitDB(ctx context.Context, pool *pgxpool.Pool) error {
 	}
 	log.Println("✓ Vaomiera insérées")
 
-	hash, err := bcrypt.GenerateFromPassword([]byte("Admin@2026"), 12)
+	adminPwd := os.Getenv("ADMIN_PASSWORD")
+	if adminPwd == "" {
+		adminPwd = "Admin@2026"
+		log.Println("⚠️  ADMIN_PASSWORD non défini, utilisation du mot de passe par défaut — changez-le en production !")
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(adminPwd), 12)
 	if err != nil {
 		return err
 	}
@@ -178,7 +186,7 @@ func InitDB(ctx context.Context, pool *pgxpool.Pool) error {
 	if err != nil {
 		return err
 	}
-	log.Println("✓ Super Admin créé : admin@akrifi.mg / Admin@2026")
+	log.Println("✓ Super Admin initialisé : admin@akrifi.mg")
 	log.Println("\n✅ Base de données AKRIFI initialisée avec succès !")
 	return nil
 }
